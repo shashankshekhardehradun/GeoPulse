@@ -34,6 +34,69 @@
   z-index: 10;
 }
 
+/* Signal Type Switcher */
+.signal-switcher {
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  background: rgba(18, 18, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 800;
+  gap: 4px;
+}
+
+.signal-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.signal-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.signal-btn.active {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);
+  color: #fff;
+  box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.signal-icon {
+  font-size: 16px;
+}
+
+.signal-label {
+  font-weight: 600;
+}
+
+.signal-count {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.signal-btn.active .signal-count {
+  background: rgba(0, 212, 255, 0.3);
+}
+
 .view-toggle {
   position: fixed;
   top: 76px;
@@ -135,6 +198,19 @@
 }
 
 @media (max-width: 768px) {
+  .signal-switcher {
+    top: auto;
+    bottom: 80px;
+  }
+  
+  .signal-btn {
+    padding: 8px 12px;
+  }
+  
+  .signal-label {
+    display: none;
+  }
+  
   .view-toggle {
     top: auto;
     bottom: 80px;

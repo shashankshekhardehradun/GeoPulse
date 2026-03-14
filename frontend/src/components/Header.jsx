@@ -1,9 +1,17 @@
 import './Header.css';
 
-export default function Header({ flightCount, lastUpdate, isConnected }) {
+export default function Header({ flightCount, lastUpdate, isConnected, signalType }) {
   const formatTime = (date) => {
     if (!date) return '--:--:--';
     return date.toLocaleTimeString();
+  };
+
+  const getUnitLabel = () => {
+    switch (signalType) {
+      case 'earthquakes': return 'events';
+      case 'flights':
+      default: return 'flights';
+    }
   };
 
   return (
@@ -17,7 +25,7 @@ export default function Header({ flightCount, lastUpdate, isConnected }) {
         <div className="stat">
           <span className="stat-label">Tracking</span>
           <span className="stat-value">{flightCount}</span>
-          <span className="stat-unit">flights</span>
+          <span className="stat-unit">{getUnitLabel()}</span>
         </div>
         
         <div className="stat">

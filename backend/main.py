@@ -1,16 +1,17 @@
 """
 GeoPulse Backend API Server
 
-Flight tracking API that aggregates data from OpenSky Network and ADS-B Exchange.
+Multi-signal tracking API for flights, earthquakes, and more.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 from datetime import datetime
+from typing import Optional
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -22,6 +23,8 @@ print(f"[GeoPulse] Loading .env from: {env_path} (exists: {env_path.exists()})")
 
 from .models import Flight, FlightList
 from .aggregator import init_aggregator, flight_aggregator
+from .earthquake_models import Earthquake, EarthquakeList
+from .earthquake_provider import earthquake_provider
 
 # API Credentials (from environment variables - no defaults for secrets)
 OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", "")
@@ -70,8 +73,8 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI application
 app = FastAPI(
     title="GeoPulse API",
-    description="Real-time flight tracking with OpenSky Network and ADS-B Exchange",
-    version="0.2.0",
+    description="Multi-signal tracking API for flights, earthquakes, and more",
+    version="0.3.0",
     lifespan=lifespan
 )
 
@@ -203,6 +206,82 @@ async def get_all_airports():
     """Get all airports."""
     from .flight_routes import AIRPORTS
     return {"airports": AIRPORTS}
+
+
+# =============================================================================
+# EARTHQUAKE ENDPOINTS
+# =============================================================================
+
+@app.get("/api/earthquakes", response_model=EarthquakeList, tags=["Earthquakes"])
+async def get_earthquakes(
+    feed: str = Query(
+        default="all_day",
+        description="USGS feed to use: all_hour, all_day, all_week, all_month, significant_day, significant_week, 4.5_day, 4.5_week, 2.5_day, 2.5_week, 1.0_day, 1.0_week"
+    ),
+    min_magnitude: Optional[float] = Query(
+        default=None,
+        description="Filter earthquakes by minimum magnitude"
+    )
+):
+    """
+    Get earthquake data from USGS.
+    
+    Returns real-time earthquake data from the USGS GeoJSON feed.
+    Data is updated every minute by USGS.
+    """
+    result = await earthquake_provider.fetch_earthquakes(feed)
+    
+    # Filter by minimum magnitude if specified
+    if min_magnitude is not None:
+        filtered = [eq for eq in result.earthquakes if eq.magnitude >= min_magnitude]
+        result = EarthquakeList(
+            earthquakes=filtered,
+            count=len(filtered),
+            timestamp=result.timestamp,
+            bbox=result.bbox
+        )
+    
+    return result
+
+
+@app.get("/api/earthquakes/{earthquake_id}", response_model=Earthquake, tags=["Earthquakes"])
+async def get_earthquake(earthquake_id: str):
+    """
+    Get details for a specific earthquake.
+    
+    Args:
+        earthquake_id: The USGS earthquake ID (e.g., "us7000m1xh")
+    """
+    result = await earthquake_provider.fetch_earthquakes("all_day")
+    
+    for eq in result.earthquakes:
+        if eq.earthquake_id == earthquake_id:
+            return eq
+    
+    raise HTTPException(status_code=404, detail=f"Earthquake {earthquake_id} not found")
+
+
+@app.get("/api/earthquakes/feeds", tags=["Earthquakes"])
+async def get_earthquake_feeds():
+    """Get available USGS earthquake feeds."""
+    return {
+        "feeds": list(earthquake_provider.FEEDS.keys()),
+        "descriptions": {
+            "all_hour": "All earthquakes in the past hour",
+            "all_day": "All earthquakes in the past 24 hours",
+            "all_week": "All earthquakes in the past 7 days",
+            "all_month": "All earthquakes in the past 30 days",
+            "significant_day": "Significant earthquakes in the past 24 hours",
+            "significant_week": "Significant earthquakes in the past 7 days",
+            "significant_month": "Significant earthquakes in the past 30 days",
+            "4.5_day": "Magnitude 4.5+ earthquakes in the past 24 hours",
+            "4.5_week": "Magnitude 4.5+ earthquakes in the past 7 days",
+            "2.5_day": "Magnitude 2.5+ earthquakes in the past 24 hours",
+            "2.5_week": "Magnitude 2.5+ earthquakes in the past 7 days",
+            "1.0_day": "Magnitude 1.0+ earthquakes in the past 24 hours",
+            "1.0_week": "Magnitude 1.0+ earthquakes in the past 7 days",
+        }
+    }
 
 
 # =============================================================================

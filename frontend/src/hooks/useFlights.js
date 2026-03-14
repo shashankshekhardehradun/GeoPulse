@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPDATE_INTERVAL = 2000;
 
-export function useFlights() {
+export default function useFlights() {
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

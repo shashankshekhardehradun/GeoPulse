@@ -166,6 +166,7 @@ export default function CesiumGlobe({
           return (
             <Entity
               key={flight.flight_id}
+              id={flight.flight_id}
               position={position}
               name={flight.callsign}
               description={`${flight.origin} → ${flight.destination}`}
