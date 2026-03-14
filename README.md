@@ -8,9 +8,11 @@ A web application for tracking various open source signals including flights, sa
 
 ## Features
 
-- **3D Globe Visualization**: Interactive globe that can zoom into 2D map view
-- **Real-time Flight Tracking**: Live updates of aircraft positions
-- **Flight Details Panel**: Click any aircraft to see detailed information
+- **3D Globe Visualization**: Interactive CesiumJS globe with terrain and imagery
+- **Real-time Flight Tracking**: Live data from OpenSky Network API
+- **Seamless View Transitions**: Smooth zoom from globe to Google Maps street-level view
+- **Flight Details Panel**: Click any aircraft to see airline, origin country, altitude, speed, and heading
+- **Airline Recognition**: Automatic identification of 100+ airlines from callsigns
 - **Responsive Design**: Works on desktop and mobile devices
 
 ## Quick Start
@@ -28,36 +30,64 @@ A web application for tracking various open source signals including flights, sa
    cd GeoPulse
    ```
 
-2. Install dependencies with Poetry:
+2. Install backend dependencies with Poetry:
    ```bash
    poetry install
    ```
 
-3. Run the application:
+3. Install frontend dependencies:
    ```bash
-   poetry run python -m uvicorn backend.main:app --reload
+   cd frontend
+   npm install
+   cd ..
    ```
 
-4. Open your browser to [http://localhost:8000](http://localhost:8000)
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your OpenSky Network credentials
+   ```
+
+5. Run the backend:
+   ```bash
+   poetry run uvicorn backend.main:app --reload --port 8000
+   ```
+
+6. Run the frontend (in a separate terminal):
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+7. Open your browser to [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
 
 ```
 GeoPulse/
-├── backend/                 # Python FastAPI backend
+├── backend/                    # Python FastAPI backend
 │   ├── __init__.py
-│   ├── main.py             # API server and routes
-│   ├── models.py           # Pydantic data models
-│   └── mock_data.py        # Mock flight data generator
-├── frontend/               # Static frontend files
-│   ├── index.html          # Main HTML page
-│   ├── css/
-│   │   └── styles.css      # Application styles
-│   └── js/
-│       ├── config.js       # Configuration constants
-│       └── flightTracker.js # Main application logic
-├── pyproject.toml          # Poetry configuration
-└── README.md               # This file
+│   ├── main.py                # API server and routes
+│   ├── models.py              # Pydantic data models
+│   ├── providers.py           # OpenSky Network API integration
+│   ├── aggregator.py          # Flight data aggregation and caching
+│   ├── flight_enrichment.py   # Airline lookup from callsigns
+│   └── mock_data.py           # Mock flight data generator (fallback)
+├── frontend/                   # React frontend (Vite)
+│   ├── src/
+│   │   ├── App.jsx            # Main application component
+│   │   ├── components/
+│   │   │   ├── CesiumGlobe.jsx    # 3D globe visualization
+│   │   │   ├── GoogleFlightMap.jsx # Google Maps integration
+│   │   │   ├── FlightInfo.jsx     # Flight details panel
+│   │   │   └── Header.jsx         # Application header
+│   │   └── hooks/
+│   │       └── useFlights.js      # Flight data fetching hook
+│   ├── package.json
+│   └── vite.config.js
+├── .env.example               # Environment variables template
+├── pyproject.toml             # Poetry configuration
+└── README.md                  # This file
 ```
 
 ## Architecture Overview
@@ -73,21 +103,26 @@ The backend is built with **FastAPI**, a modern Python web framework. It provide
 Key files:
 - `main.py`: Defines API routes and serves the frontend
 - `models.py`: Data structures using Pydantic for validation
-- `mock_data.py`: Generates realistic flight data for testing
+- `providers.py`: OpenSky Network API client with OAuth authentication
+- `aggregator.py`: Flight data caching and aggregation
+- `flight_enrichment.py`: Airline identification from callsigns
+- `mock_data.py`: Generates realistic flight data (fallback when API unavailable)
 
-### Frontend (HTML/CSS/JavaScript)
+### Frontend (React/Vite)
 
-The frontend uses **CesiumJS** for 3D globe visualization:
+The frontend uses **React** with **CesiumJS** and **Google Maps** for visualization:
 
-- **CesiumJS**: Open-source library for 3D globes and maps
-- **Vanilla JavaScript**: No framework dependencies
-- **CSS Variables**: For easy theming
+- **React**: Component-based UI framework
+- **Vite**: Fast build tool and dev server
+- **CesiumJS/Resium**: 3D globe visualization with terrain
+- **Google Maps**: Street-level map view with seamless transitions
+- **CSS Modules**: Scoped component styling
 
-Key files:
-- `index.html`: Page structure and Cesium container
-- `styles.css`: Visual styling with CSS variables
-- `flightTracker.js`: Main application logic
-- `config.js`: Configuration constants
+Key components:
+- `CesiumGlobe.jsx`: 3D globe with flight markers
+- `GoogleFlightMap.jsx`: 2D map with Google Maps integration
+- `FlightInfo.jsx`: Flight details panel
+- `useFlights.js`: Custom hook for real-time data fetching
 
 ## API Endpoints
 
@@ -105,11 +140,11 @@ Key files:
 {
   "flights": [
     {
-      "flight_id": "FL0001",
+      "flight_id": "OS_a1b2c3",
       "callsign": "UAL123",
-      "aircraft_type": "Boeing 737-800",
-      "origin": "JFK",
-      "destination": "LAX",
+      "aircraft_type": "United Airlines",
+      "origin": "United States",
+      "destination": "---",
       "position": {
         "latitude": 40.1234,
         "longitude": -100.5678,
@@ -121,7 +156,7 @@ Key files:
       "status": "en_route"
     }
   ],
-  "count": 75,
+  "count": 6000,
   "timestamp": "2024-01-15T12:00:00Z"
 }
 ```
@@ -153,13 +188,20 @@ FastAPI automatically generates API documentation:
 - **Uvicorn**: ASGI server for running the app
 
 ### Frontend
-- **CesiumJS**: 3D globe and map visualization
-- **HTML5/CSS3**: Structure and styling
-- **ES6 JavaScript**: Application logic
+- **React 18**: UI framework
+- **Vite**: Build tool and dev server
+- **CesiumJS/Resium**: 3D globe visualization
+- **Google Maps API**: Street-level map view
+- **CSS3**: Styling with modern features
+
+### APIs
+- **OpenSky Network**: Real-time flight tracking data (OAuth authentication)
 
 ## Future Enhancements
 
-- [ ] Real flight data from OpenSky Network API
+- [ ] ADS-B Exchange API integration (unfiltered data including military/private aircraft)
+- [ ] FlightAware AeroAPI integration (departure/arrival airports, flight routes)
+- [ ] Flight path visualization (origin to destination route tracing)
 - [ ] Satellite tracking (TLE data)
 - [ ] Ship tracking (AIS data)
 - [ ] Traffic data visualization
